@@ -3,12 +3,11 @@ from datetime import timedelta
 
 mongo = PyMongo()
 def init_db(app):
-    mongo.init_app(app)
     if not app.config.get("MONGO_URI"):
         raise ValueError("MONGO_URI is not set in Config. Check your .env file.")
     # Create indexes
     with app.app_context():
-        if not mongo.db:
+        if mongo.db == None:
             raise RuntimeError("MongoDB connection failed. Check your MONGO_URI and MongoDB server.")
 
         mongo.db.refresh_tokens.create_index(

@@ -8,7 +8,7 @@ from werkzeug.exceptions import Conflict, BadRequest
 
 auth_bp = Blueprint('auth', __name__)
 
-@auth_bp.route('/register', method=['POST'])
+@auth_bp.route('/register', methods=['POST'])
 def register():
     try:
         data = request.get_json()
@@ -37,7 +37,6 @@ def register():
 
 
 @auth_bp.route('/login', methods=['POST'])
-@jwt_required()
 def login():
     data = request.get_json()
     user = mongo.db.users.find_one({"email": data["email"]})
