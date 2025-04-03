@@ -13,13 +13,12 @@ class JwtService:
         })
 
     @staticmethod
-    def revoke_token(jti):
-        mongo.db.refresh_tokens.update_one(
-            {"jti": jti},
-            {"$set": {"revoked": True}}
+    def revoke_token(userId):
+        mongo.db.refresh_tokens.delete_many(
+            {"user_id": userId}
         )
 
     @staticmethod
-    def is_token_revoked(jti) -> bool:
-        token = mongo.db.refresh_tokens.find_one({"jti": jti})
+    def is_token_revoked(userId) -> bool:
+        token = mongo.db.refresh_tokens.find_many({"user_id": userId})
         return token is None or token["revoked"]

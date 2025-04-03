@@ -1,5 +1,5 @@
 from app.database import mongo
-from app.models import User
+from app.models.User import User
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo.errors import DuplicateKeyError
 from werkzeug.exceptions import Conflict
@@ -8,7 +8,7 @@ class UserService:
     @staticmethod
     def create_user(username: str, email: str, password: str, role: str = "user"):
         try:
-            if User.find_by_email(email) or User.find_by_username(username):
+            if UserService.find_by_email(email) or UserService.find_by_username(username):
                 raise Conflict("Email or username already exists")
 
             hashed_password = generate_password_hash(password)
@@ -25,7 +25,7 @@ class UserService:
         user_data = {
             "username": user.username,
             "email": user.email,
-            "password": user._password_hash, 
+            "password": user.password_hash, 
             "role": user.role,
             "created_at": user.created_at
         }
@@ -48,6 +48,6 @@ class UserService:
         return User(user_data) if user_data else None
     
     @staticmethod
-    def verify_password(self, password) -> bool:
-        return check_password_hash(self._password_hash, password)
+    def verify_password(hashedPassword ,password) -> bool:
+        return check_password_hash(hashedPassword, password)
     

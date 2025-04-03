@@ -11,16 +11,18 @@ class User(BaseModel):
     role: str = "user"
     created_at: datetime = datetime.now()
 
-    @field_validator("password_hash", mode="before")
-    @classmethod
-    def hash_password(cls, value: str) -> str:
-        """Hash the password before storing it."""
-        if len(value) < 6:
-            raise ValueError("Password must be at least 6 characters long")
-        return generate_password_hash(value)
+    def __init__(self, username: str, email: str, password: str, role: str = "user", **kwargs):
+        super().__init__(
+            username=username,
+            email=email,
+            password_hash=password,
+            role=role,
+            **kwargs
+        )
+
 
     @field_validator("role")
-    @classmethod
+    @staticmethod
     def validate_role(cls, value: str) -> str:
         if value not in {"user", "admin", "moderator"}:
             raise ValueError("Invalid role")
