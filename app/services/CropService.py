@@ -7,7 +7,6 @@ from pydantic import ValidationError
 
 
 class CropService:
-    COLLECTION = mongo.db.crops
 
     @staticmethod
     def create_crop(crop_type, growth_state, planted_at=None, block_id=None):
@@ -21,7 +20,7 @@ class CropService:
                 planted_at=planted_at or datetime.now(datetime.timezone.utc),
                 block_id=block_id
             )
-            result = CropService.COLLECTION.insert_one(crop.model_dump(exclude={"id"}))
+            result = mongo.db.crops.insert_one(crop.model_dump(exclude={"id"}))
             return str(result.inserted_id)
 
         except ValidationError as e:
@@ -29,7 +28,7 @@ class CropService:
 
     @staticmethod
     def find_by_id(crop_id: str) -> Crop:
-        crop_data = CropService.COLLECTION.find_one({"_id": ObjectId(crop_id)})
+        crop_data = mongo.db.crops.find_one({"_id": ObjectId(crop_id)})
         if not crop_data:
             raise NotFound("Crop not found")
         crop_data["id"] = str(crop_data["_id"])
@@ -37,24 +36,24 @@ class CropService:
 
     @staticmethod
     def update_crop(crop_id: str, crop_data: dict):
-        existing = CropService.COLLECTION.find_one({"_id": ObjectId(crop_id)})
+        existing = mongo.db.crops.find_one({"_id": ObjectId(crop_id)})
         if not existing:
             raise NotFound("Crop not found")
 
-        CropService.COLLECTION.update_one(
+        mongo.db.crops.update_one(
             {"_id": ObjectId(crop_id)},
             {"$set": crop_data}
         )
 
     @staticmethod
     def delete_crop(crop_id: str):
-        result = CropService.COLLECTION.delete_one({"_id": ObjectId(crop_id)})
+        result = mongo.db.crops.delete_one({"_id": ObjectId(crop_id)})
         if result.deleted_count == 0:
             raise NotFound("Crop not found")
 
     @staticmethod
     def find_by_block_id(block_id: str) -> list[Crop]:
-        crop_docs = CropService.COLLECTION.find({"block_id": block_id})
+        crop_docs = mongo.db.crops.find({"block_id": block_id})
         crops = []
         for doc in crop_docs:
             doc["id"] = str(doc["_id"])
