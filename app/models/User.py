@@ -19,11 +19,3 @@ class User(BaseModel):
             **kwargs
         )
 
-
-    @field_validator("role")
-    @staticmethod
-    def validate_role(cls, value: str) -> str:
-        if value not in {"user", "admin", "moderator"}:
-            raise ValueError("Invalid role")
-        return value
-
