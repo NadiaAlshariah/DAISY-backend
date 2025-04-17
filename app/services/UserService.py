@@ -6,7 +6,7 @@ from werkzeug.exceptions import Conflict
 
 class UserService:
     @staticmethod
-    def create_user(username: str, email: str, password: str, role: str = "user"):
+    def create_user(username: str, email: str, password: str):
         try:
             if UserService.find_by_email(email) or UserService.find_by_username(username):
                 raise Conflict("Email or username already exists")
@@ -26,8 +26,6 @@ class UserService:
             "username": user.username,
             "email": user.email,
             "password": user.password_hash, 
-            "role": user.role,
-            "created_at": user.created_at
         }
         if user.id:
             mongo.db.users.update_one({"_id": user.id}, {"$set": user_data})

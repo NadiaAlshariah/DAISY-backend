@@ -18,6 +18,9 @@ def register():
         email = data["email"]
         password = data["password"]
 
+        if "@" in username:
+            raise BadRequest("Username cannot contain '@'")
+        
         if not all([username, email, password]):
             raise BadRequest("Missing required fields (username, email, password)")
         
@@ -39,11 +42,24 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    # changed the input to "email_or_username" and "password"
     data = request.get_json()
-    user = mongo.db.users.find_one({"email": data["email"]})
-    if not user or not UserService.verify_password(user["password"], data["password"]):
-        return jsonify({"error": "Invalid credentials"}), 401
+    if not data.get("email_or_username") or not data.get("password"):
+        return jsonify({"error": "Missing email/username or password"}), 400
     
+    email_or_username = data["email_or_username"]
+    password = data["password"]
+
+    if "@" in email_or_username:
+        user = mongo.db.users.find_one({"email": email_or_username})
+    else:
+        if "@" in email_or_username:
+            return jsonify({"error": "Username cannot contain '@'"}), 400
+        user = mongo.db.users.find_one({"username": email_or_username})
+
+    if not user or not UserService.verify_password(user["password"], password):
+        return jsonify({"error": "Invalid credentials"}), 401
+
     user_id = str(user["_id"])
     access_token = create_access_token(
         identity=user_id,

@@ -4,6 +4,9 @@ from .database import init_db, mongo
 from flask_jwt_extended import JWTManager
 from .routes.AuthRoute import auth_bp
 from flask_pymongo import PyMongo
+from app.routes.LandRoute import land_bp
+from app.routes.CropRoute import crop_bp
+from app.routes.BlockRoute import block_bp
 
 def create_app():
     app = Flask(__name__)
@@ -14,5 +17,9 @@ def create_app():
     
     # Register blueprints
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(land_bp)
+    app.register_blueprint(block_bp)
+    app.register_blueprint(crop_bp)
+
     
     return app

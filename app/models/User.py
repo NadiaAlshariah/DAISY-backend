@@ -1,6 +1,5 @@
 from pydantic import BaseModel,EmailStr, field_validator
 from datetime import datetime
-from werkzeug.security import generate_password_hash
 from typing import Optional
 
 class User(BaseModel):
@@ -19,12 +18,4 @@ class User(BaseModel):
             role=role,
             **kwargs
         )
-
-
-    @field_validator("role")
-    @staticmethod
-    def validate_role(cls, value: str) -> str:
-        if value not in {"user", "admin", "moderator"}:
-            raise ValueError("Invalid role")
-        return value
 
