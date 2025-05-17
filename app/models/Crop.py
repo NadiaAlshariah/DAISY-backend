@@ -10,3 +10,4 @@ class Crop(BaseModel):
     growth_state: GrowthState
     block_id: str
     planted_at: datetime = datetime.now()
+    crop_water_requirement: float
