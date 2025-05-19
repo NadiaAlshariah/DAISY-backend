@@ -11,5 +11,7 @@ class Land(BaseModel):
     evapotranspiration: float
     rainfall_pattern : RainfallPatternEnum
     user_id: str
-    #list of blocks?
+
+    class Config:
+        use_enum_values = True
 

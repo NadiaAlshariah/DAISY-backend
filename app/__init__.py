@@ -4,10 +4,11 @@ from .database import init_db, mongo
 from flask_jwt_extended import JWTManager
 from .routes.AuthRoute import auth_bp
 from app.routes.LandRoute import land_bp
-from app.routes.CropRoute import crop_bp
 from app.routes.BlockRoute import block_bp
 from flask import Flask, jsonify
 from app.exception.BadRequestException import BadRequestException
+from werkzeug.exceptions import HTTPException
+
 
 def create_app():
     app = Flask(__name__)
@@ -20,16 +21,23 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(land_bp)
     app.register_blueprint(block_bp)
-    app.register_blueprint(crop_bp)
 
     # Register Exception Handlers
     @app.errorhandler(BadRequestException)
     def handle_user_error(e):
         return jsonify({"error": e.message}), 400
+    
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(e):
+        response = e.get_response()
+        return jsonify({
+            "error": e.name,
+            "message": e.description,
+            "code": e.code
+        }), e.code
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(e):
-        print(e.message)
-        return jsonify({"Internal server error "}), 500
+        return jsonify({"error": "Internal server error"}), 500
     
     return app
