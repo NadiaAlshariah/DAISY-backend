@@ -70,3 +70,5 @@ def delete_block(land_id, block_id):
         return jsonify({"error": str(e)}), e.code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+

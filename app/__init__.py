@@ -7,6 +7,7 @@ from flask_pymongo import PyMongo
 from app.routes.LandRoute import land_bp
 from app.routes.CropRoute import crop_bp
 from app.routes.BlockRoute import block_bp
+from app.routes.predict_irrigationRoute import predict_bp
 
 def create_app():
     app = Flask(__name__)
@@ -20,6 +21,7 @@ def create_app():
     app.register_blueprint(land_bp)
     app.register_blueprint(block_bp)
     app.register_blueprint(crop_bp)
+    app.register_blueprint(predict_bp)
 
     
     return app
