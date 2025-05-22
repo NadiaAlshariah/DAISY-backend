@@ -27,7 +27,6 @@ def create_land():
 
     data = request.get_json()
     data["user_id"] = jwt_user_id
-    data["rainfall_pattern"] = RainfallPatternEnum(data["rainfall_pattern"])
 
     land_id = LandService.create_land(data)
     return jsonify({"land_id": land_id}), 201
