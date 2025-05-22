@@ -21,7 +21,6 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(land_bp)
     app.register_blueprint(block_bp)
-    app.register_blueprint(crop_bp)
     app.register_blueprint(predict_bp)
 
     # Register Exception Handlers
