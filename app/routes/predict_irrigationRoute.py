@@ -3,9 +3,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.exceptions import HTTPException, BadRequest
 from app.services.LandService import LandService
 from app.services.BlockService import BlockService
-from app.services.PredictionService import PredictionService
+from app.services.Ai_services.prediction_service import PredictionService
 
-predict_bp = Blueprint("land", __name__, url_prefix="/lands")
+predict_bp = Blueprint("predict", __name__, url_prefix="/predict")
 
 @predict_bp.route("/<land_id>/predict_irrigation", methods=["POST"])
 @jwt_required()
