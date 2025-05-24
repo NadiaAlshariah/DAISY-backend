@@ -1,9 +1,10 @@
 import joblib
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from .data_preprocessor import DataPreprocessor
-from app.models.block import Block 
+from app.models.Block import Block 
+from app.models.Prediction import Prediction 
 from app.services.BlockService import BlockService
 
 class PredictionService:

@@ -8,3 +8,6 @@ class Land(BaseModel):
     longitude : float
     sensors: Optional[List[str]] = []
     wifi_ssid : Optional[str] = None
+    name: str
+
+
