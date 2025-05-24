@@ -5,6 +5,7 @@ from flask_jwt_extended import JWTManager
 from .routes.AuthRoute import auth_bp
 from app.routes.LandRoute import land_bp
 from app.routes.BlockRoute import block_bp
+from app.routes.SensorRoute import sensors_bp
 from app.routes.predict_irrigationRoute import predict_bp
 from flask import Flask, jsonify
 from app.exception.BadRequestException import BadRequestException
@@ -22,6 +23,8 @@ def create_app():
     app.register_blueprint(land_bp)
     app.register_blueprint(block_bp)
     app.register_blueprint(predict_bp)
+    app.register_blueprint(sensors_bp)
+
 
     # Register Exception Handlers
     @app.errorhandler(BadRequestException)

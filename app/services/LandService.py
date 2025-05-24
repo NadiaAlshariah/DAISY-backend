@@ -47,3 +47,10 @@ class LandService:
             Land(**{**land, "id": str(land["_id"])})
             for land in lands
         ]
+
+    @staticmethod
+    def get_land_by_wifi_ssid(ssid : str):
+        land = mongo.db.lands.find_one({"wifi_ssid" : ssid})
+        if not land:
+            raise NotFoundException("Land not found")
+        return Land(**land)
