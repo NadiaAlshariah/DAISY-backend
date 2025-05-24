@@ -1,0 +1,10 @@
+import joblib
+
+encoders = {
+    "soil_type": soil_encoder,
+    "rainfall_pattern": rainfall_encoder,
+    "drainage_properties": drainage_encoder,
+    "crop_type": crop_encoder,
+    "growth_stage": stage_encoder
+}
+joblib.dump(encoders, "label_encoders.joblib")
