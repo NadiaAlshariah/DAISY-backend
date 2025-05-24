@@ -1,12 +1,12 @@
 from app.database import mongo
 from app.models.Block import Block
+from app.enum.SensorStatusEnum import SensorStatus
 from bson import ObjectId
 from app.exception.BadRequestException import BadRequestException
 from app.exception.NotFoundException import NotFoundException
 from pydantic import ValidationError
 
 class BlockService:
-
     @staticmethod
     def create_block(data: dict) -> str:
         try:
@@ -62,3 +62,29 @@ class BlockService:
             block_data["id"] = str(block_data["_id"])
             blocks_list.append(Block(**block_data))
         return blocks_list
+    
+    @staticmethod
+    def disconnectSensor(block_id : str):
+        block = mongo.db.blocks.find_one({"_id": ObjectId(block_id)})
+        if not block:
+            raise NotFoundException("Block not found")
+
+        sensor_id = block.get("sensor_id")
+
+        result = mongo.db.blocks.update_one(
+            {"_id": ObjectId(block_id)},
+            {"$set": {"sensor_id": None}}
+        )
+        if result.matched_count == 0:
+            raise NotFoundException("Block not found")
+
+        if sensor_id:
+            mongo.db.sensors.update_one(
+                {"_id": sensor_id},
+                {"$set": {
+                    "status": SensorStatus.DISCONNECTED.value,
+                    "pin": -1
+                }}
+            )
+
+        return True

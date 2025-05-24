@@ -19,3 +19,4 @@ class Block(BaseModel):
     block_id: str
     planted_at: datetime = datetime.now()
     crop_water_requirement: float
+    sensor_id : Optional[str] = None
