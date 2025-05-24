@@ -4,6 +4,9 @@ from werkzeug.exceptions import HTTPException, BadRequest
 from app.services.LandService import LandService
 from app.services.BlockService import BlockService
 from app.services.Ai_services.prediction_service import PredictionService
+from app.services.WeatherService import WeatherService
+from app.models.CropModel import CropModel
+from datetime import datetime
 
 predict_bp = Blueprint("predict", __name__, url_prefix="/predict")
 
@@ -23,22 +26,26 @@ def predict_irrigationRoute(land_id):
             return jsonify({"error": "No blocks with crops found"}), 400
 
         selected_crop = selected_block["crops"][0]
+        selected_crop = CropModel(**raw_crop)
 
+        weatherData = WeatherService.getCurrentWeatherInfo(land.latitude, land.longitude,datetime.now().hour)
+        if "error" in weatherData:
+            return jsonify({"error": f"Weather data error: {weatherData['error']}"}), 500
+        
         input_data = {
-            "temperature": land.current_temperature,
-            "humidity": land.current_humidity,
-            "wind_speed": land.wind_speed,
-            "evapotranspiration": land.evapotranspiration,
-            "rainfall_pattern": land.rainfall_pattern.value,
-            "soil_moisture_levels": selected_block.current_soil_moisture,
-            "water_retention_capacity": selected_block.water_retention_capacity,
-            "soil_type": selected_block.soil_type.value,
-            "drainage_properties": selected_block.drainage_properties.value,
+            "temperature": weatherData.get("temperature_c"),
+            "humidity": weatherData.get("humidity"),
+            "wind_speed": weatherData.get("wind_ms"),
+            "evapotranspiration": weatherData.get("evapotranspiration"),
+            "rainfall_pattern": weatherData.get("rainfall_pattern").value,
+            "soil_moisture_levels": selected_block["current_soil_moisture"],
+            "water_retention_capacity": selected_block["water_retention_capacity"],
+            "soil_type": selected_block["soil_type"].value,
+            "drainage_properties": selected_block["drainage_properties"].value,
             "crop_type": selected_crop.crop_type.value,
             "growth_stage": selected_crop.growth_state.value,
             "crop_water_requirement": selected_crop.crop_water_requirement
         }
-
         required_fields = [
             'temperature', 'humidity', 'wind_speed', 'evapotranspiration',
             'soil_moisture_levels', 'water_retention_capacity', 'crop_type',
