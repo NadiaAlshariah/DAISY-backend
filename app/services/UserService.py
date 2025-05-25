@@ -1,8 +1,10 @@
 from app.database import mongo
 from app.models.User import User
 from werkzeug.security import generate_password_hash, check_password_hash
-from pymongo.errors import DuplicateKeyError
 from app.exception.BadRequestException import BadRequestException 
+from app.exception.NotFoundException import NotFoundException
+from bson import ObjectId
+
 
 class UserService:
     @staticmethod
@@ -18,6 +20,27 @@ class UserService:
             
         result = UserService.save(user)
         return result
+    
+
+    @staticmethod
+    def change_password(user_id: str, current_password: str, new_password: str):
+        try:
+            user_object_id = ObjectId(user_id)
+        except Exception:
+            raise BadRequestException("Invalid user ID format")
+
+        user = mongo.db.users.find_one({"_id": user_object_id})
+        if not user:
+            raise NotFoundException("User not found")
+
+        if not UserService.verify_password(user["password"], current_password):
+            raise BadRequestException("Incorrect current password")
+
+        hashed_new_password = generate_password_hash(new_password)
+        mongo.db.users.update_one(
+            {"_id": user_object_id},
+            {"$set": {"password": hashed_new_password}}
+        )
      
      
     @staticmethod
