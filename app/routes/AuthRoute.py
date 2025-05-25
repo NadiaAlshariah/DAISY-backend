@@ -1,9 +1,11 @@
+from bson import ObjectId
 from flask import Blueprint, jsonify, request
 from app.services.JwtService import JwtService
 from app.services.UserService import UserService
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, create_refresh_token, decode_token
 from app.database import mongo
 from app.exception.BadRequestException import BadRequestException 
+from app.exception.NotFoundException import NotFoundException
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -92,6 +94,23 @@ def refresh():
         access_token=new_access_token,
         refresh_token=new_refresh_token
     ), 200 
+
+
+@auth_bp.route('/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    current_password = data.get("current_password")
+    new_password = data.get("new_password")
+
+    if not current_password or not new_password:
+        raise BadRequestException("Current and new passwords are required")
+
+    UserService.change_password(user_id, current_password, new_password)
+
+    return jsonify(message="Password updated successfully"), 200
+
 
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()

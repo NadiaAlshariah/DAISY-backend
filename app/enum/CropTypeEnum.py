@@ -1,8 +1,18 @@
 from enum import Enum
 
-# Enum for Crop Types
 class CropType(str, Enum):
-    WHEAT = "wheat"
-    CORN = "corn"
-    RICE = "rice"
+    BANANA = "banana"
+    SOYABEAN = "soyabean"
+    CABBAGE = "cabbage"
     POTATO = "potato"
+    RICE = "rice"
+    MELON = "melon"
+    CORN = "corn"
+    LEMON = "lemon"
+    BEAN = "bean"
+    WHEAT = "wheat"
+    MUSTARD = "mustard"
+    COTTON = "cotton"
+    SUGARCANE = "sugarcane"
+    TOMATO = "tomato"
+    ONION = "onion"
