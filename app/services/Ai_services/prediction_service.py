@@ -6,7 +6,7 @@ from typing import Dict, Any
 from app.models.prediction import PredictionModel
 from app.services.BlockService import BlockService
 from app import mongo
-from app.services.data_preprocessor import DataPreprocessor  # fix relative import
+from app.services.Ai_services.data_preprocessor import DataPreprocessor 
 
 class PredictionService:
     def __init__(self):

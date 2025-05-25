@@ -46,13 +46,5 @@ def update_block(land_id, block_id):
 @block_bp.route("/<block_id>", methods=["DELETE"])
 @jwt_required()
 def delete_block(land_id, block_id):
-    try:
-        BlockService.delete_block(block_id)
-        return jsonify({"message": "Block deleted"}), 200
-    except HTTPException as e:
-        return jsonify({"error": str(e)}), e.code
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
     BlockService.delete_block(block_id)
     return jsonify({"message": "Block deleted"}), 200
