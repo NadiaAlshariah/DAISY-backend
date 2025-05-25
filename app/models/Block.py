@@ -12,6 +12,7 @@ class Block(BaseModel):
     growth_state: GrowthState
     planted_at: datetime = datetime.now()
 
+    sensor_id : Optional[str] = None
     soil_moisture: Optional[float] = None
     region = Optional[str] = None
 
