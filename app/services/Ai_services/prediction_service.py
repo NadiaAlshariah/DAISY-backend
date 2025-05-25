@@ -1,12 +1,13 @@
 # app/services/PredictionService.py
 import joblib
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
-from app.models.prediction import PredictionModel
+from app.models.Prediction import PredictionModel
 from app.services.BlockService import BlockService
 from app import mongo
 from app.services.Ai_services.data_preprocessor import DataPreprocessor 
+
 
 class PredictionService:
     def __init__(self):
@@ -14,10 +15,12 @@ class PredictionService:
         self.model = joblib.load(model_path)
         self.preprocessor = DataPreprocessor()
 
+
     def predict(self, input_data: dict) -> float:
         processed_input = self.preprocessor.preprocess_input(input_data)
         prediction_value = self.model.predict(processed_input)[0]
         return round(prediction_value, 2)
+
 
     def predict_and_save(self, land_id: str, block_id: str, input_data: dict) -> Dict[str, Any]:
         prediction_value = self.predict(input_data)
@@ -29,7 +32,7 @@ class PredictionService:
         )
         mongo.db.predictions.insert_one(prediction.to_dict())
 
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
         mongo.db.predictions.delete_many({
             "land_id": land_id,
             "timestamp": {"$lt": cutoff}
@@ -42,6 +45,7 @@ class PredictionService:
             "unit": "mm/day",
             "timestamp": prediction.timestamp.isoformat()
         }
+
 
     def get_irrigation_history(self, land_id: str, limit: int = 5) -> Dict[str, Any]:
         blocks = BlockService.get_blocks_by_land_id(land_id)

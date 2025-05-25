@@ -48,3 +48,22 @@ def update_block(land_id, block_id):
 def delete_block(land_id, block_id):
     BlockService.delete_block(block_id)
     return jsonify({"message": "Block deleted"}), 200
+
+
+@block_bp.route("/crop-distribution", methods=["GET"])
+@jwt_required()
+def get_crop_distribution_for_land(land_id):
+    blocks = BlockService.get_blocks_by_land_id(land_id)
+
+    crop_counts = {}
+    total_blocks = 0
+
+    for block in blocks:
+        crop = block.crop_type
+        crop_counts[crop] = crop_counts.get(crop, 0) + 1
+        total_blocks += 1
+
+    return jsonify({
+        "total_blocks": total_blocks,
+        "crop_distribution": crop_counts
+    }), 200

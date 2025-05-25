@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify
 from app.services.LandService import LandService
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.enum.RainfallPatternEnum import RainfallPatternEnum
+from app.services.BlockService import BlockService
+from datetime import datetime
+from app.services.WeatherService import WeatherService
+from app.exception.BadRequestException import BadRequestException
 
 land_bp = Blueprint("land", __name__, url_prefix="/lands")
 
@@ -44,3 +47,38 @@ def edit_land(land_id):
 def delete_land(land_id):
     LandService.delete_land(land_id)
     return jsonify({"message": "Land deleted"}), 200
+
+
+@land_bp.route('/crop-distribution', methods=['GET'])
+@jwt_required()
+def get_crop_distribution():
+    user_id = get_jwt_identity()
+    lands = LandService.get_lands_by_user_id(user_id)
+
+    crop_counts = {}
+    total_blocks = 0
+
+    for land in lands:
+        blocks = BlockService.get_blocks_by_land_id(land.id)
+        for block in blocks:
+            crop = block.crop_type
+            crop_counts[crop] = crop_counts.get(crop, 0) + 1
+            total_blocks += 1
+
+    return jsonify({
+        "total_blocks": total_blocks,
+        "crop_distribution": crop_counts
+    }), 200
+
+
+@land_bp.route("/<land_id>/weather", methods=["GET"])
+@jwt_required()
+def get_weather_by_land_id(land_id):
+    hour = datetime.now().hour 
+    land = LandService.get_land_by_id(land_id)
+    
+    if not land or not land.latitude or not land.longitude:
+        raise BadRequestException("Land not found or missing coordinates.")
+    
+    weather_info = WeatherService.getCurrentWeatherInfo(land.latitude, land.longitude)
+    return jsonify(weather_info), 200
