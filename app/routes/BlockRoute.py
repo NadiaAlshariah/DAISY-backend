@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from app.services.BlockService import BlockService
+from app.ml.cropyield.service.YieldPredictionService import YieldPredictionService
+
 
 block_bp = Blueprint("block", __name__, url_prefix="/lands/<land_id>/blocks")
 
@@ -67,3 +69,21 @@ def get_crop_distribution_for_land(land_id):
         "total_blocks": total_blocks,
         "crop_distribution": crop_counts
     }), 200
+
+
+@block_bp.route("/<block_id>/predict-yield", methods=["GET"])
+@jwt_required()
+def predict_yield_for_block(land_id, block_id):
+    try:
+        prediction = YieldPredictionService().predict_by_block_id(block_id)
+        prediction_data = prediction.model_dump()
+
+        tons_per_hectare = prediction_data.get("yield_tons_per_hectare", 0)
+        kg_per_m2 = round(tons_per_hectare * 0.1, 3)  # 3 decimals
+
+        prediction_data["yield_kg_per_m2"] = kg_per_m2
+        prediction_data["yield_unit"] = "kg/m²"
+
+        return jsonify(prediction_data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

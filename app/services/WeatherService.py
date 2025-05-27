@@ -32,13 +32,13 @@ class WeatherService:
             "condition_icon": f"http://openweathermap.org/img/wn/{weather.get('icon')}@2x.png" if weather.get("icon") else None,
         }
      
-        
-
+    
     @staticmethod
     def mapWeatherCondition(description: str, wind_speed: float) -> str:
+        """Used for weather_condition_today"""
+        description = description.lower()
         if wind_speed > 7.0:
             return "WINDY"
-        
         if any(word in description for word in ["rain", "thunderstorm", "shower", "snow", "mist", "drizzle"]):
             return "RAINY"
         elif "clear" in description:
@@ -48,3 +48,19 @@ class WeatherService:
         else:
             return "NORMAL"
 
+    @staticmethod
+    def mapYieldWeatherCondition(description: str, wind_speed: float) -> str:
+        """
+        Maps to one of: ['Sunny', 'Rainy', 'Cloudy']
+        Used for appending to weather_history
+        """
+        description = description.lower()
+        if wind_speed > 7.0:
+            return "Cloudy" 
+
+        if any(word in description for word in ["rain", "thunderstorm", "shower", "snow", "mist", "drizzle"]):
+            return "Rainy"
+        elif "clear" in description:
+            return "Sunny"
+        else:
+            return "Cloudy"

@@ -1,8 +1,18 @@
 from flask import Blueprint, request, jsonify
 from app.services.SensorService import SensorService
 from app.enum.SensorStatusEnum import SensorStatus
+from app.services.BlockService import BlockService
+from app.ml.irrigation.service.IrrigationMLService import IrrigationPredictionService
 
 sensors_bp = Blueprint('sensors', __name__)
+
+@sensors_bp.route('/update-soil-moisture-predict', methods=['POST'])
+def update_soil_moisture_and_predict():
+    data = request.get_json()
+    sensor = SensorService.getSensorByMacAndPin(data["mac_address"], data["pin"])
+    BlockService.update_block(sensor.block_id, {"soil_moisture": data["soil_moisture"]})
+    return IrrigationPredictionService.predict_by_block_id(sensor.block_id)
+
 
 @sensors_bp.route('/block/<block_id>', methods=['GET'])
 def get_sensor_by_block_id(block_id):

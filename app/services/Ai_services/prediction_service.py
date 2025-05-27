@@ -25,7 +25,7 @@ class PredictionService:
     def predict_and_save(self, land_id: str, block_id: str, input_data: dict) -> Dict[str, Any]:
         prediction_value = self.predict(input_data)
 
-        prediction = PredictionModel(
+        prediction = Prediction(
             land_id=land_id,
             block_id=block_id,
             water_requirement=prediction_value
