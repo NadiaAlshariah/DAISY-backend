@@ -3,7 +3,7 @@ import joblib
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
-from app.models.Prediction import PredictionModel
+from app.models.prediction import Prediction
 from app.services.BlockService import BlockService
 from app import mongo
 from app.services.Ai_services.data_preprocessor import DataPreprocessor 

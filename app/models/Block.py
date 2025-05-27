@@ -14,6 +14,6 @@ class Block(BaseModel):
 
     sensor_id : Optional[str] = None
     soil_moisture: Optional[float] = None
-    region = Optional[str] = None
+    region : Optional[str] = None
 
     crop_water_requirement: Optional[float] = None
