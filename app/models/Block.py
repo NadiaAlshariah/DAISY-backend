@@ -38,7 +38,6 @@ class Block(BaseModel):
         else:
             return "WET"
 
-
     def get_soil_texture(self) -> str:
         if self.soil_moisture is None:
             return "unknown"
