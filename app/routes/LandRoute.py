@@ -5,6 +5,10 @@ from app.services.BlockService import BlockService
 from datetime import datetime
 from app.services.WeatherService import WeatherService
 from app.exception.BadRequestException import BadRequestException
+from app.ml.cropyield.service.YieldPredictionService import YieldPredictionService
+from app.ml.irrigation.service.IrrigationMLService import IrrigationPredictionService
+
+
 
 land_bp = Blueprint("land", __name__, url_prefix="/lands")
 
@@ -82,3 +86,87 @@ def get_weather_by_land_id(land_id):
     
     weather_info = WeatherService.getCurrentWeatherInfo(land.latitude, land.longitude)
     return jsonify(weather_info), 200
+
+
+@land_bp.route("/<land_id>/predict-yield", methods=["GET"])
+@jwt_required()
+def predict_yield_for_land(land_id):
+    try:
+        predictions = YieldPredictionService().get_latest_predictions_by_land_id(land_id)
+        result = []
+
+        for prediction in predictions:
+            data = prediction.model_dump()
+            tons_per_hectare = data.get("yield_tons_per_hectare", 0)
+            data["yield_kg_per_m2"] = round(tons_per_hectare * 0.1, 3)
+            data["yield_unit"] = "kg/m²"
+            result.append(data)
+
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@land_bp.route("/<land_id>/user/predict-yield", methods=["GET"])
+@jwt_required()
+def predict_yield_for_user(land_id):
+    try:
+        user_id = LandService.get_land_by_id(land_id).user_id
+        predictions = YieldPredictionService().get_latest_predictions_by_user_id(user_id)
+        result = []
+
+        for prediction in predictions:
+            data = prediction.model_dump()
+            tons_per_hectare = data.get("yield_tons_per_hectare", 0)
+            data["yield_kg_per_m2"] = round(tons_per_hectare * 0.1, 3)
+            data["yield_unit"] = "kg/m²"
+            result.append(data)
+
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+land_bp = Blueprint("land", __name__, url_prefix="/lands")
+prediction_service = IrrigationPredictionService()
+
+@land_bp.route("/<land_id>/irrigation-predict", methods=["GET"])
+@jwt_required()
+def predict_irrigation_summary_for_land(land_id):
+    try:
+        prediction = prediction_service.get_latest_prediction_by_land_id(land_id)
+        return jsonify(prediction.model_dump()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@land_bp.route("/<land_id>/irrigation-predict-history", methods=["GET"])
+@jwt_required()
+def get_all_irrigation_predictions_for_land(land_id):
+    try:
+        all_preds, summary = prediction_service.get_all_predictions_by_land_id(land_id)
+        return jsonify({
+            "predictions": [p.model_dump() for p in all_preds],
+            "summary": summary.model_dump()
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@land_bp.route("/user/irrigation-predict-summary", methods=["GET"])
+@jwt_required()
+def get_user_irrigation_summary():
+    try:
+        user_id = get_jwt_identity()
+        summary = prediction_service.get_latest_predictions_summary_by_user_id(user_id)
+        return jsonify(summary.model_dump()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@land_bp.route("/user/irrigation-predict-summary/history", methods=["GET"])
+@jwt_required()
+def get_user_irrigation_history_summary():
+    try:
+        user_id = get_jwt_identity()
+        summary = prediction_service.get_all_predictions_summary_by_user_id(user_id)
+        return jsonify(summary.model_dump()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

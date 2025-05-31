@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import joblib
 from pathlib import Path
 from app.models.Block import Block
@@ -19,14 +20,16 @@ class IrrigationPredictionService:
         self.zscore_stats = joblib.load(base_path / "zscore_stats.pkl") 
 
 
-    def predict_by_block_id(self, block_id: str) -> float:
+    def predict_by_block_id(self, block_id: str) -> IrrigationPrediciton:
         block = BlockService.get_block_by_id(block_id)
         land = LandService.get_land_by_id(block.land_id)
         processed = self.preprocess_block_data(block, land)
-        return round(self.model.predict(processed)[0], 2)
+        prediction_value = round(self.model.predict(processed)[0], 2)
+
+        return self.save_prediction(block, land, prediction_value)
     
 
-    def build_prediction_object(self, block: Block, land: Land, prediction: float) -> IrrigationPrediciton:
+    def save_prediction(self, block: Block, land: Land, prediction: float) -> IrrigationPrediciton:
         soil_type = block.get_soil_type_category()
         temp_category = self.map_temperature_range(land.get_latest_temperature())
         crop_type = block.crop_type if block.crop_type else "WHEAT"
@@ -35,12 +38,15 @@ class IrrigationPredictionService:
 
         prediction_record = IrrigationPrediciton(
             block_id=block.id,
+            land_id=land.id,
+            user_id=land.user_id,
             soil_type=soil_type,
             crop_type=crop_type.upper(),
             region=region,
             tempreture=temp_category,
             weather_condition=weather_condition,
-            water_requirement=str(prediction)
+            water_requirement=str(prediction),
+            created_at=datetime.now(timezone.utc)
         )
 
         inserted = mongo.db.irrigation_predictions.insert_one(
@@ -95,6 +101,136 @@ class IrrigationPredictionService:
         scaled_df = pd.DataFrame(scaled_array, columns=final_df.columns)
 
         return scaled_df
+    
+
+    def get_latest_prediction_by_block_id(self, block_id: str) -> IrrigationPrediciton:
+        record = mongo.db.irrigation_predictions.find_one(
+            {"block_id": block_id},
+            sort=[("created_at", -1), ("_id", -1)]
+        )
+        if record:
+            record["id"] = str(record["_id"])
+            return IrrigationPrediciton(**record)
+        return self.predict_by_block_id(block_id)
+
+
+    def get_latest_prediction_by_land_id(self, land_id: str) -> IrrigationPrediciton:
+        blocks = BlockService.get_blocks_by_land_id(land_id)
+        total_water = 0.0
+        last_preds = []
+
+        for block in blocks:
+            prediction = self.get_latest_prediction_by_block_id(block.id)
+            total_water += float(prediction.water_requirement)
+            last_preds.append(prediction)
+
+        latest_created = max(p.created_at for p in last_preds)
+        return IrrigationPrediciton(
+            block_id="ALL",
+            land_id=land_id,
+            user_id=last_preds[0].user_id if last_preds else "",
+            soil_type="mixed",
+            crop_type="mixed",
+            region="mixed",
+            tempreture="mixed",
+            weather_condition="mixed",
+            water_requirement=str(round(total_water, 2)),
+            created_at=latest_created
+        )
+    
+
+    def get_all_predictions_by_land_id(self, land_id: str) -> tuple[list[IrrigationPrediciton], IrrigationPrediciton]:
+        blocks = BlockService.get_blocks_by_land_id(land_id)
+        all_preds = []
+
+        for block in blocks:
+            block_preds = self.get_all_predictions_by_block_id(block.id)
+            all_preds.extend(block_preds)
+
+        if not all_preds:
+            raise Exception("No predictions found for this land.")
+
+        total_water = sum(float(p.water_requirement) for p in all_preds)
+        latest_created = max(p.created_at for p in all_preds)
+
+        summary = IrrigationPrediciton(
+            block_id="ALL",
+            land_id=land_id,
+            user_id=all_preds[0].user_id,
+            soil_type="mixed",
+            crop_type="mixed",
+            region="mixed",
+            tempreture="mixed",
+            weather_condition="mixed",
+            water_requirement=str(round(total_water, 2)),
+            created_at=latest_created
+        )
+
+        return all_preds, summary
+
+
+    def get_latest_predictions_summary_by_user_id(self, user_id: str) -> IrrigationPrediciton:
+        lands = LandService.get_lands_by_user_id(user_id)
+        total_water = 0.0
+        all_predictions = []
+
+        for land in lands:
+            blocks = BlockService.get_blocks_by_land_id(land.id)
+            for block in blocks:
+                prediction = self.get_latest_prediction_by_block_id(block.id)
+                total_water += float(prediction.water_requirement)
+                all_predictions.append(prediction)
+
+        if not all_predictions:
+            raise Exception("No predictions available for this user.")
+
+        latest_created = max(p.created_at for p in all_predictions)
+
+        return IrrigationPrediciton(
+            block_id="ALL",
+            land_id="ALL",
+            user_id=user_id,
+            soil_type="mixed",
+            crop_type="mixed",
+            region="mixed",
+            tempreture="mixed",
+            weather_condition="mixed",
+            water_requirement=str(round(total_water, 2)),
+            created_at=latest_created
+        )
+    
+
+    def get_all_predictions_summary_by_user_id(self, user_id: str) -> tuple[list[IrrigationPrediciton], IrrigationPrediciton]:
+        lands = LandService.get_lands_by_user_id(user_id)
+        all_predictions = []
+
+        for land in lands:
+            blocks = BlockService.get_blocks_by_land_id(land.id)
+            for block in blocks:
+                block_predictions = self.get_all_predictions_by_block_id(block.id)
+                all_predictions.extend(block_predictions)
+
+        if not all_predictions:
+            raise Exception("No predictions found for user.")
+
+        total_water = sum(float(p.water_requirement) for p in all_predictions)
+        latest_created = max(p.created_at for p in all_predictions)
+
+        summary = IrrigationPrediciton(
+            block_id="ALL",
+            land_id="ALL",
+            user_id=user_id,
+            soil_type="mixed",
+            crop_type="mixed",
+            region="mixed",
+            tempreture="mixed",
+            weather_condition="mixed",
+            water_requirement=str(round(total_water, 2)),
+            created_at=latest_created
+        )
+
+        return all_predictions, summary
+
 
 
     @staticmethod

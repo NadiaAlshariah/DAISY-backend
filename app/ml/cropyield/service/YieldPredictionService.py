@@ -7,6 +7,8 @@ from app.ml.cropyield.model.YieldPrediction import YieldPrediction
 from app.services.BlockService import BlockService
 from app.services.LandService import LandService
 from app.database import mongo
+from datetime import datetime, timezone
+
 
 class YieldPredictionService:
     def __init__(self):
@@ -19,7 +21,7 @@ class YieldPredictionService:
         land = LandService.get_land_by_id(block.land_id)
         processed_df = self.preprocess_block_data(block, land)
         prediction = round(self.model.predict(processed_df)[0], 2)
-        return self.build_prediction_object(block, land, prediction)
+        return self.save_prediction(block, land, prediction)
 
 
     def preprocess_block_data(self, block: Block, land: Land) -> pd.DataFrame:
@@ -63,9 +65,11 @@ class YieldPredictionService:
         return final_df
 
 
-    def build_prediction_object(self, block: Block, land: Land, prediction: float) -> YieldPrediction:
+    def save_prediction(self, block: Block, land: Land, prediction: float) -> YieldPrediction:
         prediction_record = YieldPrediction(
             block_id=block.id,
+            land_id=land.id,
+            user_id=land.user_id,
             crop = block.crop_type if block.crop_type else "Wheat",
             soil_type = block.get_soil_texture(),
             rainfall = block.rainfall_mm,
@@ -75,7 +79,8 @@ class YieldPredictionService:
             weather_condition = land.most_frequent_weather() or "NORMAL",
             region = "North",
             days_to_harvest = 140.0,
-            yield_tons_per_hectare=prediction
+            yield_tons_per_hectare=prediction,
+            created_at=datetime.now(timezone.utc)
         )
 
         inserted = mongo.db.yield_predictions.insert_one(
@@ -83,3 +88,55 @@ class YieldPredictionService:
         )
         prediction_record.id = str(inserted.inserted_id)
         return prediction_record
+    
+    
+    def get_latest_prediction_by_block_id(self, block_id: str) -> YieldPrediction | None:
+        record = mongo.db.yield_predictions.find_one(
+            {"block_id": block_id},
+            sort=[("created_at", -1), ("_id", -1)]
+        )
+
+        if record:
+            record["id"] = str(record["_id"])
+            return YieldPrediction(**record)
+
+        return None
+    
+
+    def get_latest_predictions_by_land_id(self, land_id: str) -> list[YieldPrediction]:
+        blocks = BlockService.get_blocks_by_land_id(land_id)
+        predictions = []
+
+        for block in blocks:
+            record = mongo.db.yield_predictions.find_one(
+                {"block_id": block.id},
+                sort=[("created_at", -1), ("_id", -1)]
+            )
+
+            if record:
+                record["id"] = str(record["_id"])
+                predictions.append(YieldPrediction(**record))
+            # else: skip if no prediction
+
+        return predictions
+    
+
+    def get_latest_predictions_by_user_id(self, user_id: str) -> list[YieldPrediction]:
+        lands = LandService.get_lands_by_user_id(user_id)
+        predictions = []
+
+        for land in lands:
+            blocks = BlockService.get_blocks_by_land_id(land.id)
+
+            for block in blocks:
+                record = mongo.db.yield_predictions.find_one(
+                    {"block_id": block.id},
+                    sort=[("created_at", -1), ("_id", -1)]
+                )
+
+                if record:
+                    record["id"] = str(record["_id"])
+                    predictions.append(YieldPrediction(**record))
+
+        return predictions
+
