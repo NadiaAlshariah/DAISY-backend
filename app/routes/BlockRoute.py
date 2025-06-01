@@ -87,3 +87,13 @@ def predict_yield_for_block(land_id, block_id):
         return jsonify(prediction_data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+@block_bp.route("/<block_id>/disconnect-sensor", methods=["POST"])
+def disconnect_sensor(block_id):
+    try:
+        BlockService.disconnectSensor(block_id)
+        return jsonify({"message": "Sensor disconnected from block successfully."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    

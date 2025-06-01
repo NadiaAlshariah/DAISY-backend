@@ -83,4 +83,15 @@ class LandService:
         land = mongo.db.lands.find_one({"wifi_ssid" : ssid})
         if not land:
             raise NotFoundException("Land not found")
-        return Land(**land)
+        return Land(**land, id=str(land["_id"]))
+    
+
+    @staticmethod
+    def add_sensor_to_land(land_id: str, sensor_id: str):
+        existing = mongo.db.lands.find_one({"_id": ObjectId(land_id)})
+        if not existing:
+            raise NotFoundException("Land not found")
+        mongo.db.lands.update_one(
+            {"_id": ObjectId(land_id)},
+            {"$push": {"sensors": sensor_id}}
+        )

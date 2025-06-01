@@ -1,3 +1,5 @@
+import threading
+import time
 from flask import Flask
 from .config import Config
 from .database import init_db, mongo
@@ -10,6 +12,30 @@ from flask import Flask, jsonify
 from app.exception.BadRequestException import BadRequestException
 from werkzeug.exceptions import HTTPException
 from app.tools.UpdateWeatherThread import start_weather_scheduler
+from datetime import datetime, timedelta
+from bson import ObjectId
+from app.enum.SensorStatusEnum import SensorStatus
+
+def mark_sensors_offline():
+    print("[Background] Sensor offline checker started.")
+    while True:
+        print("[Background] Checking for offline sensors...")
+        cutoff = datetime.now() - timedelta(minutes=20)
+        offline_sensors = list(mongo.db.sensors.find({
+            "last_heartbeat": {"$lt": cutoff},
+            "status": {"$ne": SensorStatus.OFFLINE.value}
+        }))
+        sensor_ids = [s["_id"] for s in offline_sensors]
+        if sensor_ids:
+            mongo.db.sensors.update_many(
+                {"_id": {"$in": sensor_ids}},
+                {"$set": {"status": SensorStatus.OFFLINE.value}}
+            )
+            print(f"[Background] Marked {len(sensor_ids)} sensors as OFFLINE.")
+        else:
+            print("[Background] No offline sensors found this cycle.")
+        time.sleep(60)
+
 
 
 def create_app():
@@ -41,10 +67,12 @@ def create_app():
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(e):
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": str(e)}), 500
     
 
     with app.app_context():
         start_weather_scheduler(app)
     
+    threading.Thread(target=mark_sensors_offline, daemon=True).start()
+
     return app

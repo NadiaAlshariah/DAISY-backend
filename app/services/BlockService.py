@@ -38,6 +38,17 @@ class BlockService:
             updated = {**existing, **data}
             validated_block = Block(**updated)
             update_dict = validated_block.model_dump(exclude={"id"})
+
+
+            sensor_id = data.get("sensor_id")
+            if sensor_id:
+                mongo.db.sensors.update_one(
+                    {"_id": ObjectId(sensor_id)},
+                    {"$set": {
+                        "block_id": block_id,
+                        "status": SensorStatus.CONNECTED.value
+                    }}
+                )
             
             mongo.db.blocks.update_one(
                 {"_id": ObjectId(block_id)},
@@ -83,7 +94,6 @@ class BlockService:
                 {"_id": sensor_id},
                 {"$set": {
                     "status": SensorStatus.DISCONNECTED.value,
-                    "pin": -1
                 }}
             )
 
