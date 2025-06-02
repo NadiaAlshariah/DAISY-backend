@@ -1,10 +1,10 @@
 import threading
 import time
 from flask import Flask
-from .config import Config
-from .database import init_db, mongo
+from app.config import Config
+from app.database import init_db, mongo
 from flask_jwt_extended import JWTManager
-from .routes.AuthRoute import auth_bp
+from app.routes.AuthRoute import auth_bp
 from app.routes.LandRoute import land_bp
 from app.routes.BlockRoute import block_bp
 from app.routes.SensorRoute import sensors_bp

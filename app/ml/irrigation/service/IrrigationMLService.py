@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import joblib
 from pathlib import Path
 from app.models.Block import Block
@@ -19,14 +20,16 @@ class IrrigationPredictionService:
         self.zscore_stats = joblib.load(base_path / "zscore_stats.pkl") 
 
 
-    def predict_by_block_id(self, block_id: str) -> float:
+    def predict_by_block_id(self, block_id: str) -> IrrigationPrediciton:
         block = BlockService.get_block_by_id(block_id)
         land = LandService.get_land_by_id(block.land_id)
         processed = self.preprocess_block_data(block, land)
-        return round(self.model.predict(processed)[0], 2)
+        prediction_value = round(self.model.predict(processed)[0], 2)
+
+        return self.save_prediction(block, land, prediction_value)
     
 
-    def build_prediction_object(self, block: Block, land: Land, prediction: float) -> IrrigationPrediciton:
+    def save_prediction(self, block: Block, land: Land, prediction: float) -> IrrigationPrediciton:
         soil_type = block.get_soil_type_category()
         temp_category = self.map_temperature_range(land.get_latest_temperature())
         crop_type = block.crop_type if block.crop_type else "WHEAT"
@@ -35,12 +38,15 @@ class IrrigationPredictionService:
 
         prediction_record = IrrigationPrediciton(
             block_id=block.id,
+            land_id=land.id,
+            user_id=land.user_id,
             soil_type=soil_type,
             crop_type=crop_type.upper(),
             region=region,
             tempreture=temp_category,
             weather_condition=weather_condition,
-            water_requirement=str(prediction)
+            water_requirement=str(prediction),
+            created_at=datetime.now(timezone.utc)
         )
 
         inserted = mongo.db.irrigation_predictions.insert_one(
@@ -95,6 +101,77 @@ class IrrigationPredictionService:
         scaled_df = pd.DataFrame(scaled_array, columns=final_df.columns)
 
         return scaled_df
+    
+
+    def get_latest_prediction_by_block_id(self, block_id: str) -> IrrigationPrediciton:
+        record = mongo.db.irrigation_predictions.find_one(
+            {"block_id": block_id},
+            sort=[("created_at", -1), ("_id", -1)]
+        )
+        if record:
+            record["id"] = str(record["_id"])
+            return IrrigationPrediciton(**record)
+        return self.predict_by_block_id(block_id)
+    
+
+    def get_all_predictions_by_block_id(self, block_id: str) -> list[IrrigationPrediciton]:
+        cursor = mongo.db.irrigation_predictions.find(
+            {"block_id": block_id}
+        ).sort([("created_at", -1), ("_id", -1)])
+
+        predictions = [IrrigationPrediciton(**{**record, "id": str(record["_id"])}) for record in cursor]
+
+        # If empty, generate a new prediction
+        if not predictions:
+            prediction = self.predict_by_block_id(block_id)
+            return [prediction]
+
+        return predictions
+
+    def calculate_water_summary_by_land_id(self, land_id: str) -> dict:
+        blocks = BlockService.get_blocks_by_land_id(land_id)
+        all_water_values = []
+
+        for block in blocks:
+            predictions = self.get_all_predictions_by_block_id(block.id)
+            all_water_values.extend([float(p.water_requirement) for p in predictions])
+
+        if not all_water_values:
+            raise Exception("No irrigation data found for this land.")
+
+        total = round(sum(all_water_values), 2)
+        avg = round(total / len(all_water_values), 2)
+
+        return {
+            "land_id": land_id,
+            "total_water": total,
+            "average_water": avg,
+            "record_count": len(all_water_values)
+        }
+
+
+    def calculate_water_summary_by_user_id(self, user_id: str) -> dict:
+        lands = LandService.get_lands_by_user_id(user_id)
+        all_water_values = []
+
+        for land in lands:
+            blocks = BlockService.get_blocks_by_land_id(land.id)
+            for block in blocks:
+                predictions = self.get_all_predictions_by_block_id(block.id)
+                all_water_values.extend([float(p.water_requirement) for p in predictions])
+
+        if not all_water_values:
+            raise Exception("No irrigation data found for this user.")
+
+        total = round(sum(all_water_values), 2)
+        avg = round(total / len(all_water_values), 2)
+
+        return {
+            "user_id": user_id,
+            "total_water": total,
+            "average_water": avg,
+            "record_count": len(all_water_values)
+        }
 
 
     @staticmethod
