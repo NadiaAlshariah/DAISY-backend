@@ -45,7 +45,7 @@ class IrrigationPredictionService:
             region=region,
             tempreture=temp_category,
             weather_condition=weather_condition,
-            water_requirement=str(prediction),
+            water_requirement=prediction,
             created_at=datetime.now(timezone.utc)
         )
 
@@ -134,7 +134,7 @@ class IrrigationPredictionService:
 
         for block in blocks:
             predictions = self.get_all_predictions_by_block_id(block.id)
-            all_water_values.extend([float(p.water_requirement) for p in predictions])
+            all_water_values.extend([(p.water_requirement) for p in predictions])
 
         if not all_water_values:
             raise Exception("No irrigation data found for this land.")
@@ -158,7 +158,7 @@ class IrrigationPredictionService:
             blocks = BlockService.get_blocks_by_land_id(land.id)
             for block in blocks:
                 predictions = self.get_all_predictions_by_block_id(block.id)
-                all_water_values.extend([float(p.water_requirement) for p in predictions])
+                all_water_values.extend([p.water_requirement for p in predictions])
 
         if not all_water_values:
             raise Exception("No irrigation data found for this user.")

@@ -12,5 +12,5 @@ class IrrigationPrediciton(BaseModel):
     region: Optional[str] = None
     tempreture: Optional[str] = None
     weather_condition: Optional[str] = None
-    water_requirement: Optional[str] = None
+    water_requirement: Optional[float] = None
     created_at: Optional[datetime] = None

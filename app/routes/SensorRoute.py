@@ -10,10 +10,9 @@ sensors_bp = Blueprint('sensors', __name__)
 def update_soil_moisture_and_predict():
     data = request.get_json()
     sensor = SensorService.getSensorByMacAndPin(data["mac_address"], data["pin"])
-    print(sensor)
     prediction_service = IrrigationPredictionService()
     prediction =  prediction_service.predict_by_block_id(sensor.block_id)
-    return jsonify({"prediction": float(prediction)})
+    return jsonify({"prediction": prediction.water_requirement})
 
 
 @sensors_bp.route('/block/<block_id>', methods=['GET'])
