@@ -88,7 +88,7 @@ def predict_yield_for_block(land_id, block_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-
+    
 @block_bp.route("/<block_id>/irrigation-predict", methods=["GET"])
 @jwt_required()
 def predict_irrigation_for_block(land_id, block_id):
@@ -107,3 +107,13 @@ def get_all_irrigation_predictions_for_block(land_id, block_id):
         return jsonify([p.model_dump() for p in predictions]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+      
+@block_bp.route("/<block_id>/disconnect-sensor", methods=["POST"])
+def disconnect_sensor(block_id):
+    try:
+        BlockService.disconnectSensor(block_id)
+        return jsonify({"message": "Sensor disconnected from block successfully."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
