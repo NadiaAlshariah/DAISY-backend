@@ -100,7 +100,8 @@ class YieldPredictionService:
             record["id"] = str(record["_id"])
             return YieldPrediction(**record)
 
-        return None
+        return self.predict_by_block_id(block_id)
+        
     
 
     def get_latest_predictions_by_land_id(self, land_id: str) -> list[YieldPrediction]:
@@ -108,15 +109,9 @@ class YieldPredictionService:
         predictions = []
 
         for block in blocks:
-            record = mongo.db.yield_predictions.find_one(
-                {"block_id": block.id},
-                sort=[("created_at", -1), ("_id", -1)]
-            )
-
-            if record:
-                record["id"] = str(record["_id"])
-                predictions.append(YieldPrediction(**record))
-            # else: skip if no prediction
+            prediction = self.get_latest_prediction_by_block_id(block.id)
+            if prediction:
+                predictions.append(prediction)
 
         return predictions
     
@@ -124,19 +119,10 @@ class YieldPredictionService:
     def get_latest_predictions_by_user_id(self, user_id: str) -> list[YieldPrediction]:
         lands = LandService.get_lands_by_user_id(user_id)
         predictions = []
-
+    
         for land in lands:
-            blocks = BlockService.get_blocks_by_land_id(land.id)
-
-            for block in blocks:
-                record = mongo.db.yield_predictions.find_one(
-                    {"block_id": block.id},
-                    sort=[("created_at", -1), ("_id", -1)]
-                )
-
-                if record:
-                    record["id"] = str(record["_id"])
-                    predictions.append(YieldPrediction(**record))
-
+            land_predictions = self.get_latest_predictions_by_land_id(land.id)
+            predictions.extend(land_predictions)
+    
         return predictions
 

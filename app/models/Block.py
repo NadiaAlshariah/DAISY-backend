@@ -8,7 +8,7 @@ from app.enum.CropTypeEnum import CropType
 class Block(BaseModel):
     id: Optional[str] = None
     land_id: str
-    soil_moisture: Optional[float] = None
+    soil_moisture: Optional[float] = 0
     crop_type: Optional[CropType] = None
 
     rainfall_mm: float = 0.0

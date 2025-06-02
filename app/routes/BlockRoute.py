@@ -93,7 +93,7 @@ def predict_yield_for_block(land_id, block_id):
 @jwt_required()
 def predict_irrigation_for_block(land_id, block_id):
     try:
-        prediction = IrrigationPredictionService.get_latest_prediction_by_block_id(block_id)
+        prediction = IrrigationPredictionService().get_latest_prediction_by_block_id(block_id)
         return jsonify(prediction.model_dump()), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -103,7 +103,7 @@ def predict_irrigation_for_block(land_id, block_id):
 @jwt_required()
 def get_all_irrigation_predictions_for_block(land_id, block_id):
     try:
-        predictions = IrrigationPredictionService.get_all_predictions_by_block_id(block_id)
+        predictions = IrrigationPredictionService().get_all_predictions_by_block_id(block_id)
         return jsonify([p.model_dump() for p in predictions]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

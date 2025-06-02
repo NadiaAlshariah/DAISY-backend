@@ -112,125 +112,66 @@ class IrrigationPredictionService:
             record["id"] = str(record["_id"])
             return IrrigationPrediciton(**record)
         return self.predict_by_block_id(block_id)
-
-
-    def get_latest_prediction_by_land_id(self, land_id: str) -> IrrigationPrediciton:
-        blocks = BlockService.get_blocks_by_land_id(land_id)
-        total_water = 0.0
-        last_preds = []
-
-        for block in blocks:
-            prediction = self.get_latest_prediction_by_block_id(block.id)
-            total_water += float(prediction.water_requirement)
-            last_preds.append(prediction)
-
-        latest_created = max(p.created_at for p in last_preds)
-        return IrrigationPrediciton(
-            block_id="ALL",
-            land_id=land_id,
-            user_id=last_preds[0].user_id if last_preds else "",
-            soil_type="mixed",
-            crop_type="mixed",
-            region="mixed",
-            tempreture="mixed",
-            weather_condition="mixed",
-            water_requirement=str(round(total_water, 2)),
-            created_at=latest_created
-        )
     
 
-    def get_all_predictions_by_land_id(self, land_id: str) -> tuple[list[IrrigationPrediciton], IrrigationPrediciton]:
+    def get_all_predictions_by_block_id(self, block_id: str) -> list[IrrigationPrediciton]:
+        cursor = mongo.db.irrigation_predictions.find(
+            {"block_id": block_id}
+        ).sort([("created_at", -1), ("_id", -1)])
+
+        predictions = [IrrigationPrediciton(**{**record, "id": str(record["_id"])}) for record in cursor]
+
+        # If empty, generate a new prediction
+        if not predictions:
+            prediction = self.predict_by_block_id(block_id)
+            return [prediction]
+
+        return predictions
+
+    def calculate_water_summary_by_land_id(self, land_id: str) -> dict:
         blocks = BlockService.get_blocks_by_land_id(land_id)
-        all_preds = []
+        all_water_values = []
 
         for block in blocks:
-            block_preds = self.get_all_predictions_by_block_id(block.id)
-            all_preds.extend(block_preds)
+            predictions = self.get_all_predictions_by_block_id(block.id)
+            all_water_values.extend([float(p.water_requirement) for p in predictions])
 
-        if not all_preds:
-            raise Exception("No predictions found for this land.")
+        if not all_water_values:
+            raise Exception("No irrigation data found for this land.")
 
-        total_water = sum(float(p.water_requirement) for p in all_preds)
-        latest_created = max(p.created_at for p in all_preds)
+        total = round(sum(all_water_values), 2)
+        avg = round(total / len(all_water_values), 2)
 
-        summary = IrrigationPrediciton(
-            block_id="ALL",
-            land_id=land_id,
-            user_id=all_preds[0].user_id,
-            soil_type="mixed",
-            crop_type="mixed",
-            region="mixed",
-            tempreture="mixed",
-            weather_condition="mixed",
-            water_requirement=str(round(total_water, 2)),
-            created_at=latest_created
-        )
-
-        return all_preds, summary
+        return {
+            "land_id": land_id,
+            "total_water": total,
+            "average_water": avg,
+            "record_count": len(all_water_values)
+        }
 
 
-    def get_latest_predictions_summary_by_user_id(self, user_id: str) -> IrrigationPrediciton:
+    def calculate_water_summary_by_user_id(self, user_id: str) -> dict:
         lands = LandService.get_lands_by_user_id(user_id)
-        total_water = 0.0
-        all_predictions = []
+        all_water_values = []
 
         for land in lands:
             blocks = BlockService.get_blocks_by_land_id(land.id)
             for block in blocks:
-                prediction = self.get_latest_prediction_by_block_id(block.id)
-                total_water += float(prediction.water_requirement)
-                all_predictions.append(prediction)
+                predictions = self.get_all_predictions_by_block_id(block.id)
+                all_water_values.extend([float(p.water_requirement) for p in predictions])
 
-        if not all_predictions:
-            raise Exception("No predictions available for this user.")
+        if not all_water_values:
+            raise Exception("No irrigation data found for this user.")
 
-        latest_created = max(p.created_at for p in all_predictions)
+        total = round(sum(all_water_values), 2)
+        avg = round(total / len(all_water_values), 2)
 
-        return IrrigationPrediciton(
-            block_id="ALL",
-            land_id="ALL",
-            user_id=user_id,
-            soil_type="mixed",
-            crop_type="mixed",
-            region="mixed",
-            tempreture="mixed",
-            weather_condition="mixed",
-            water_requirement=str(round(total_water, 2)),
-            created_at=latest_created
-        )
-    
-
-    def get_all_predictions_summary_by_user_id(self, user_id: str) -> tuple[list[IrrigationPrediciton], IrrigationPrediciton]:
-        lands = LandService.get_lands_by_user_id(user_id)
-        all_predictions = []
-
-        for land in lands:
-            blocks = BlockService.get_blocks_by_land_id(land.id)
-            for block in blocks:
-                block_predictions = self.get_all_predictions_by_block_id(block.id)
-                all_predictions.extend(block_predictions)
-
-        if not all_predictions:
-            raise Exception("No predictions found for user.")
-
-        total_water = sum(float(p.water_requirement) for p in all_predictions)
-        latest_created = max(p.created_at for p in all_predictions)
-
-        summary = IrrigationPrediciton(
-            block_id="ALL",
-            land_id="ALL",
-            user_id=user_id,
-            soil_type="mixed",
-            crop_type="mixed",
-            region="mixed",
-            tempreture="mixed",
-            weather_condition="mixed",
-            water_requirement=str(round(total_water, 2)),
-            created_at=latest_created
-        )
-
-        return all_predictions, summary
-
+        return {
+            "user_id": user_id,
+            "total_water": total,
+            "average_water": avg,
+            "record_count": len(all_water_values)
+        }
 
 
     @staticmethod

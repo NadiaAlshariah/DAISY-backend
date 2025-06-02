@@ -9,7 +9,6 @@ from app.ml.cropyield.service.YieldPredictionService import YieldPredictionServi
 from app.ml.irrigation.service.IrrigationMLService import IrrigationPredictionService
 
 
-
 land_bp = Blueprint("land", __name__, url_prefix="/lands")
 
 @land_bp.route("/<land_id>", methods=["GET"])
@@ -107,11 +106,11 @@ def predict_yield_for_land(land_id):
         return jsonify({"error": str(e)}), 500
     
 
-@land_bp.route("/<land_id>/user/predict-yield", methods=["GET"])
+@land_bp.route("/user/predict-yield", methods=["GET"])
 @jwt_required()
-def predict_yield_for_user(land_id):
+def predict_yield_for_user():
     try:
-        user_id = LandService.get_land_by_id(land_id).user_id
+        user_id = get_jwt_identity()
         predictions = YieldPredictionService().get_latest_predictions_by_user_id(user_id)
         result = []
 
@@ -127,46 +126,18 @@ def predict_yield_for_user(land_id):
         return jsonify({"error": str(e)}), 500
     
 
-land_bp = Blueprint("land", __name__, url_prefix="/lands")
 prediction_service = IrrigationPredictionService()
 
-@land_bp.route("/<land_id>/irrigation-predict", methods=["GET"])
+@land_bp.route("/<land_id>/water-summary", methods=["GET"])
 @jwt_required()
-def predict_irrigation_summary_for_land(land_id):
-    try:
-        prediction = prediction_service.get_latest_prediction_by_land_id(land_id)
-        return jsonify(prediction.model_dump()), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+def get_water_summary_by_land(land_id):
+    summary = prediction_service.calculate_water_summary_by_land_id(land_id)
+    return jsonify(summary), 200
+   
+@land_bp.route("/user/water-summary", methods=["GET"])
+@jwt_required()
+def get_water_summary_by_user():
+    user_id = get_jwt_identity()
+    summary = prediction_service.calculate_water_summary_by_user_id(user_id)
+    return jsonify(summary), 200
 
-@land_bp.route("/<land_id>/irrigation-predict-history", methods=["GET"])
-@jwt_required()
-def get_all_irrigation_predictions_for_land(land_id):
-    try:
-        all_preds, summary = prediction_service.get_all_predictions_by_land_id(land_id)
-        return jsonify({
-            "predictions": [p.model_dump() for p in all_preds],
-            "summary": summary.model_dump()
-        }), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@land_bp.route("/user/irrigation-predict-summary", methods=["GET"])
-@jwt_required()
-def get_user_irrigation_summary():
-    try:
-        user_id = get_jwt_identity()
-        summary = prediction_service.get_latest_predictions_summary_by_user_id(user_id)
-        return jsonify(summary.model_dump()), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@land_bp.route("/user/irrigation-predict-summary/history", methods=["GET"])
-@jwt_required()
-def get_user_irrigation_history_summary():
-    try:
-        user_id = get_jwt_identity()
-        summary = prediction_service.get_all_predictions_summary_by_user_id(user_id)
-        return jsonify(summary.model_dump()), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
