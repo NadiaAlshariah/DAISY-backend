@@ -12,7 +12,7 @@ from flask import Flask, jsonify
 from app.exception.BadRequestException import BadRequestException
 from werkzeug.exceptions import HTTPException
 from app.tools.UpdateWeatherThread import start_weather_scheduler
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from app.enum.SensorStatusEnum import SensorStatus
 
@@ -20,7 +20,7 @@ def mark_sensors_offline():
     print("[Background] Sensor offline checker started.")
     while True:
         print("[Background] Checking for offline sensors...")
-        cutoff = datetime.now() - timedelta(minutes=20)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=20)
         offline_sensors = list(mongo.db.sensors.find({
             "last_heartbeat": {"$lt": cutoff},
             "status": {"$ne": SensorStatus.OFFLINE.value}

@@ -5,7 +5,7 @@ from app.models.Sensor import Sensor
 from app.enum.SensorStatusEnum import SensorStatus
 from app.services.LandService import LandService
 from pydantic import ValidationError
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class SensorService:
@@ -59,7 +59,7 @@ class SensorService:
 
             except NotFoundException:
                 data["status"] = SensorStatus.DISCONNECTED.value
-                data["last_heartbeat"] = datetime.now()
+                data["last_heartbeat"] = datetime.now(timezone.utc)
                 sensor = Sensor(**data)
                 result = mongo.db.sensors.insert_one(sensor.model_dump(exclude={"id"}))
                 sensor_id = str(result.inserted_id)
@@ -109,6 +109,7 @@ class SensorService:
         block_id = sensor.get("block_id")
         if block_id and block_id != "" and block_id is not None:
             status = SensorStatus.CONNECTED.value
+            print(status)
         else:
             status = SensorStatus.DISCONNECTED.value
 
@@ -116,7 +117,7 @@ class SensorService:
         result = mongo.db.sensors.update_one(
             {"mac_address": mac_address, "pin": pin},
             {"$set": {
-                "last_heartbeat": datetime.now(),
+                "last_heartbeat": datetime.now(timezone.utc),
                 "status": status
             }}
         )
@@ -131,7 +132,7 @@ class SensorService:
             {"mac_address": mac_address, "pin": pin},
             {"$set": {
                 "status": status.value,
-                "last_heartbeat": datetime.now()
+                "last_heartbeat": datetime.now(timezone.utc)
             }}
         )
         if result.matched_count == 0:
